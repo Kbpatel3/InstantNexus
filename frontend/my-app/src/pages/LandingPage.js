@@ -7,7 +7,12 @@ function LandingPage() {
     // State to keep track if the user accepted the terms and privacy policies
     const [accepted, setAccepted] = useState(false);
 
-    // Function to handle the accept button click
+    /**
+     * Function to handle the button click
+     * @returns {void} Nothing
+     * @description Redirects the user to the dashboard if the user has accepted the terms and privacy policies
+     * Otherwise, alerts the user to accept the terms and privacy policies
+     */
     const handleButtonClick = () => {
         if (!accepted) {
             // Alert the user to accept the terms and privacy policies
@@ -18,6 +23,11 @@ function LandingPage() {
         }
     }
 
+    /**
+     * Function to handle the checkbox button click
+     * @returns {void} Nothing
+     * @description Toggles the accepted state
+     */
     const handleCheckboxButton = () => {
         setAccepted(!accepted);
     }
