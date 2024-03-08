@@ -16,8 +16,5 @@ CORS(app, resources={r'/*': {'origins': '*'}})
 # Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins='*')
 
-
-
-
 if __name__ == '__main__':
     socketio.run(app)
