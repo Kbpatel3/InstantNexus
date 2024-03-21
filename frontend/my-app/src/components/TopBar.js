@@ -6,7 +6,7 @@ import ActiveUserCount from './ActiveUserCount.js';
 const TopBar = () => {
     return (
         <>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center p-4">
                 <HomeButton />
                 <AppName />
                 <ActiveUserCount />
