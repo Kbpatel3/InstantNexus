@@ -15,21 +15,22 @@ socket.on('connect', () => {
 
 function DashboardPage() {
   return (
-    <div className="grid grid-cols-10 grid-rows-10 gap-2">
-      <div className="col-span-10">
+    <div className="grid grid-cols-1 md:grid-cols-10 p-4 gap-2">
+      <div className="col-span-full">
         <TopBar />
       </div>
-      <div className="col-span-10 row-span-6 row-start-2">
+      <div className="col-span-full md:row-span-3 lg:row-span-2">
         <VideoFeedContainer />
       </div>
-      <div className="col-span-10 row-span-2 row-start-8">
+      <div className="col-span-full md:row-span-2">
         <MessageHistory />
       </div>
-      <div className="col-span-10 row-start-10">
+      <div className="col-span-full">
         <MessageInput />
       </div>
     </div>
   );
 }
+
 
 export default DashboardPage;

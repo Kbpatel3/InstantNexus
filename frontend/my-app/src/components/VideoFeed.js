@@ -19,7 +19,7 @@ const VideoFeed = () => {
     }, []);
 
     return (
-        <div>
+        <div className="aspect-w-16 aspect-h-9 mx-auto max-w-3xl">
             <video
                 className="w-full h-auto"
                 controls
@@ -27,6 +27,7 @@ const VideoFeed = () => {
             ></video>
         </div>
     );
+    
 };
 
 export default VideoFeed;
