@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import tempVideo from './temp.mp4';
 
-const VideoFeed = () => {
+const VideoFeed = ({ videoFeed, myFeed }) => {
     // Get the width of the window
     const [width, setWidth] = useState(window.innerWidth);
 
@@ -22,8 +22,10 @@ const VideoFeed = () => {
         <div className="aspect-w-16 aspect-h-9 mx-auto max-w-3xl">
             <video
                 className="w-full h-auto"
-                controls
-                src={tempVideo}
+                playsInline={true}
+                muted={myFeed}
+                ref={videoFeed}
+                autoPlay={true}
             ></video>
         </div>
     );
