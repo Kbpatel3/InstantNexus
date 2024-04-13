@@ -15,7 +15,7 @@ socket.on('connect', () => {
 
 function DashboardPage() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-10 p-4 gap-2">
+    <div className="grid grid-cols-1 md:grid-cols-10 p-2 gap-2">
       <div className="col-span-full">
         <TopBar />
       </div>

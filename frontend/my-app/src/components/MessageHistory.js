@@ -22,10 +22,8 @@ const MessageHistory = () => {
     ]);
 
     return (
-        // Applying Tailwind CSS classes
-        <div className="flex flex-col-reverse overflow-y-auto p-4 max-h-[200px] w-full">
+        <div className="flex flex-col-reverse overflow-y-auto p-2 max-h-[200px] w-full bg-[#282c34] rounded-lg">
             {messages.map((message, index) => {
-                // Assuming your Message component is already styled or can accept `position` for custom rendering
                 return <Message key={index} message={message.message} position={message.position} />;
             })}
         </div>
