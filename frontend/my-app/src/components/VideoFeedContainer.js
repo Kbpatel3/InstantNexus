@@ -21,6 +21,11 @@ const VideoFeedContainer = () => {
 
     useEffect(() => {
         navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+            console.log("Stream active:", stream.active); // Check if the stream is active
+            stream.getTracks().forEach(track => {
+                console.log(track.kind + " track ready state:", track.readyState); // Should be 'live'
+            });
+            
             setStream(stream);
         }).catch(error => {
             console.error("Failed to get user media", error);
