@@ -1,17 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import io from 'socket.io-client';
 import TopBar from '../components/TopBar';
 import VideoFeedContainer from '../components/VideoFeedContainer';
 import MessageHistory from '../components/MessageHistory';
 import MessageInput from '../components/MessageInput';
-
-// Create a new socket.io client
-const socket = io('http://localhost:5000');
-
-// Test the connection
-socket.on('connect', () => {
-  alert('Connected to the server');
-});
 
 function DashboardPage() {
   return (
