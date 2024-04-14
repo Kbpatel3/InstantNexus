@@ -1,9 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import tempVideo from './temp.mp4';
 
-const VideoFeed = ({ videoFeed, myFeed }) => {
+const VideoFeed = ({ videoFeed, myFeed, isStream = false }) => {
     // Get the width of the window
     const [width, setWidth] = useState(window.innerWidth);
+
+    // Video Ref
+    const videoRef = useRef(null);
+
+    // Check if the video feed is a stream
+    useEffect(() => {
+        if (isStream && videoRef.current && videoFeed) {
+            videoRef.current.srcObject = videoFeed;
+        }
+
+    }, [videoFeed, isStream])
 
     // Update the width when the window resizes
     useEffect(() => {
@@ -23,9 +34,12 @@ const VideoFeed = ({ videoFeed, myFeed }) => {
             <video
                 className="w-full h-auto"
                 playsInline={true}
-                muted={myFeed}
-                ref={videoFeed}
                 autoPlay={true}
+                muted={myFeed}
+                ref={videoRef}
+                src={!isStream ? videoFeed : undefined}
+                onCanPlay={() => videoRef.current.play()}
+                style={myFeed ? { transform: 'scaleX(-1)' } : {}}
             ></video>
         </div>
     );
