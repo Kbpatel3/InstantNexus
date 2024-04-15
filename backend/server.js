@@ -44,11 +44,11 @@ io.on('connection', (socket) => {
         users[socket.id] = false;
 
         // Get a random user to connect to
-        let userToCall = getRandomUser();
+        let userToCall = getRandomUser(socket.id);
 
         // If there is a user to call, send a message to the user to connect
         if (userToCall) {
-            io.to(data.userToCall).emit("callUser", {signal: data.signalData, from: data.from});
+            io.to(userToCall).emit("callUser", {signal: data.signalData, from: socket.id});
         }
     });
 
@@ -59,17 +59,21 @@ io.on('connection', (socket) => {
         io.to(data.to).emit("callAccepted", data.signal);
     });
 
-    // // Wait for the socket call get_user_count and send the user count
-    // socket.on("get_user_count", () => {
-    //     console.log("Got request for user count");
-    //     socket.broadcast.emit("user_count", Object.keys(users).length);
-    // });
+    // Wait for the socket call get_user_count and send the user count
+    socket.on("get_user_count", () => {
+        console.log("Got request for user count");
+        // Send the user count back to the requesting client only
+        socket.emit("user_count", Object.keys(users).length);
+    })
 });
 
-function getRandomUser() {
-    // Get a random user from the list of users that is available to connect by checking the value and seeing if it is true
-    let randomUser = Object.keys(users).find(key => users[key] === true);
-    return randomUser;
+function getRandomUser(excludeId) {
+    let availableUsers = Object.keys(users).filter(key => users[key] === true && key !== excludeId);
+    if (availableUsers.length > 0) {
+        let randomIndex = Math.floor(Math.random() * availableUsers.length);
+        return availableUsers[randomIndex];
+    }
+    return null;
 }
 
 server.listen(5000, () => console.log('server is running on port 5000'));

@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import Peer from "simple-peer";
-import { io } from "socket.io-client";
 import VideoFeed from './VideoFeed';
-import { eventEmitter } from '../event/EventEmitter';
-
-const socket = io.connect("http://localhost:5000");
+import SocketContext from '../context/SocketContext';
+import { useContext } from 'react';
 
 const VideoFeedContainer = () => {
+    const socket = useContext(SocketContext);
     const [myId, setMyId] = useState("");
     const [stream, setStream] = useState(null);
     const [receivingCall, setReceivingCall] = useState(false);
@@ -20,45 +19,30 @@ const VideoFeedContainer = () => {
     const connectionRef = useRef(null);
 
     useEffect(() => {
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-            console.log("Stream active:", stream.active); // Check if the stream is active
-            stream.getTracks().forEach(track => {
-                console.log(track.kind + " track ready state:", track.readyState); // Should be 'live'
+        if (socket) {
+            navigator.mediaDevices.getUserMedia({video: true, audio: true}).then((stream) => {
+                console.log("Stream active:", stream.active); // Check if the stream is active
+                stream.getTracks().forEach(track => {
+                    console.log(track.kind + " track ready state:", track.readyState); // Should be 'live'
+                });
+
+                setStream(stream);
+            }).catch(error => {
+                console.error("Failed to get user media", error);
             });
-            
-            setStream(stream);
-        }).catch(error => {
-            console.error("Failed to get user media", error);
-        });
 
-        socket.on('my_id', (id) => {
-            console.log("My id:", id); // Debugging: Print the id of the user (socket id)
-            setMyId(id);
-        });
-
-        socket.on("callUser", (data) => {
-            setReceivingCall(true);
-            setCaller(data.from);
-            setCallerSignal(data.signal);
-        });
-    }, []);
-
-    
-    useEffect(() => {
-        console.log("Waiting for user count... event to be emitted from ActiveUserCount.js")
-        // Event Emitter for getting user count
-        eventEmitter.on("get_user_count", () => {
-            console.log("ActiveUserCount.js emitted get_user_count event")
-            socket.emit("get_user_count");
-            console.log("Emitted to backend")
-
-            socket.on("user_count", (count) => {
-                console.log("Received user count from backend")
-                console.log(count);
-                eventEmitter.emit("user_count", count);
+            socket.on('my_id', (id) => {
+                console.log("My id:", id); // Debugging: Print the id of the user (socket id)
+                setMyId(id);
             });
-        });
-    })
+
+            socket.on("callUser", (data) => {
+                setReceivingCall(true);
+                setCaller(data.from);
+                setCallerSignal(data.signal);
+            });
+        }
+    }, [socket]);
 
 
     const callUser = (id) => {

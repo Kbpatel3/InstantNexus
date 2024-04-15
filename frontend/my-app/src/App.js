@@ -5,6 +5,11 @@ import LandingPage from './pages/LandingPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import './styles.css';
+import SocketContext from "./context/SocketContext";
+import { io } from "socket.io-client";
+
+// Make a connection to the server
+const socket = io.connect("http://localhost:5000");
 
 /**
  * App component that contains the routes for the application
@@ -13,14 +18,16 @@ import './styles.css';
 function App() {
     // Routes for the application
     return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-            </Routes>
-        </Router>
+        <SocketContext.Provider value={socket}>
+            <Router>
+                <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                </Routes>
+            </Router>
+        </SocketContext.Provider>
     );
 }
 
