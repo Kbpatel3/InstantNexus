@@ -45,7 +45,7 @@ const VideoFeedContainer = () => {
     }, [socket]);
 
 
-    const callUser = (id) => {
+    const callUser = () => {
         const peer = new Peer({
             initiator: true,
             trickle: false,
@@ -54,7 +54,6 @@ const VideoFeedContainer = () => {
 
         peer.on("signal", (data) => {
             socket.emit("callUser", {
-                userToCall: id,
                 signalData: data,
                 from: myId,
             });
@@ -97,6 +96,22 @@ const VideoFeedContainer = () => {
       connectionRef.current.destroy();
     };
 
+    const handleSkip = () => {
+        leaveCall();
+    }
+
+    const handleStart = () => {
+        if (receivingCall) {
+            answerCall();
+        } else {
+            callUser();
+        }
+    }
+
+    const handleStop = () => {
+        leaveCall();
+    }
+
     return (
         <>
             <div className="flex justify-between items-center p-2">
@@ -110,13 +125,15 @@ const VideoFeedContainer = () => {
                     className="aspect-w-16 aspect-h-9 w-full max-w-[65%]"> {/* Adjust aspect
                      ratio and width */}
                     {callAccepted && !callEnded && userStream ?
-                        <VideoFeed videoFeed={userStream} myFeed={false} isStream={true}/>
+                        <VideoFeed key={stream.id} videoFeed={stream} myFeed={false} isStream={true}/>
                     : null}
                 </div>
             </div>
-            <div className="flex justify-center"> {/* Updated classes for horizontal
+            <div className="flex justify-center p-2"> {/* Updated classes for horizontal
              centering */}
-                <button className="btn btn-secondary btn-sm">Skip</button>
+                <button className={"btn btn-primary btn-sm p-2"} onClick={handleStart}>Start</button>
+                <button className="btn btn-secondary btn-sm p-2" onClick={handleSkip}>Skip</button>
+                <button className="btn btn-secondary btn-sm p-2" onClick={handleStop}>Stop</button>
             </div>
         </>
     );
