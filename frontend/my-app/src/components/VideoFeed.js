@@ -31,19 +31,25 @@ const VideoFeed = ({ videoFeed, myFeed, isStream = false }) => {
 
     return (
         <div className="aspect-w-16 aspect-h-9 mx-auto max-w-3xl">
-            <video
-                className="w-full h-auto"
-                playsInline={true}
-                autoPlay={true}
-                muted={myFeed}
-                ref={videoRef}
-                src={!isStream ? videoFeed : undefined}
-                onCanPlay={() => videoRef.current.play()}
-                style={myFeed ? { transform: 'scaleX(-1)' } : {}}
-            ></video>
+            {videoFeed ? (
+                <video
+                    className="w-full h-auto"
+                    playsInline={true}
+                    autoPlay={true}
+                    muted={myFeed}
+                    ref={videoRef}
+                    src={!isStream ? videoFeed : undefined}
+                    onCanPlay={() => videoRef.current.play()}
+                    style={myFeed ? {transform: 'scaleX(-1)'} : {}}
+                ></video>
+            ) : (
+                <div className={"w-full h-auto flex items-center justify-center"} style={{fontSize: '1rem'}}>
+                    {myFeed ? "Please allow access to your camera and microphone" : "Waiting for user to start video feed"}
+                </div>
+            )}
         </div>
     );
-    
+
 };
 
 export default VideoFeed;

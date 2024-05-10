@@ -20,16 +20,15 @@ io.on('connection', (socket) => {
     // Get the user's id
     socket.emit("my_id", socket.id);
 
-    // Add the user to the list of users
-    users[socket.id] = true;
+    // Add the user to the list of users with no availability to connect
+    users[socket.id] = false;
 
     // Debugging: Print the list of users
     console.log(users);
 
-    // When the user disconnects, send a message to connected users
-    socket.on("disconnect", () => {
+    // Handle the disconnect event
+    socket.on('disconnect', () => {
         console.log('User disconnected');
-        socket.broadcast.emit("callEnded");
 
         // Remove the user from the list of users
         delete users[socket.id];
@@ -38,32 +37,77 @@ io.on('connection', (socket) => {
         console.log(users);
     });
 
-    // When a user is ready to connect to another user
-    socket.on("callUser", (data) => {
-        // Set the user to not available to connect
-        users[socket.id] = false;
+    // Handle the get_user_count event
+    socket.on("get_user_count", () => {
+        let count = Object.keys(users).length;
+        io.emit("user_count", count);
+    });
+
+    // Handle the start event
+    socket.on('start', () => {
+        console.log("User " + socket.id + " started the call");
+
+        // Set the user's availability to connect to true
+        users[socket.id] = true;
 
         // Get a random user to connect to
-        let userToCall = getRandomUser(socket.id);
+        let peerId = getRandomUser(socket.id);
+        if (peerId) {
+            // Emit the connect_to event to the calling user
+            socket.emit('connect_to', { peerId: peerId });
 
-        // If there is a user to call, send a message to the user to connect
-        if (userToCall) {
-            io.to(userToCall).emit("callUser", {signal: data.signalData, from: socket.id});
+            // Emit the incoming_call event to the peerId
+            io.to(peerId).emit('incoming_call', { callerId: socket.id });
         }
     });
 
-    // When a user answers the call
-    socket.on("answerCall", (data) => {
-        // Set the user to not available to connect
-        users[data.from] = false;
-        io.to(data.to).emit("callAccepted", data.signal);
+    // Handle the stop event
+    socket.on('stop', (peerId) => {
+        console.log("User " + socket.id + " stopped the call");
+
+        // Set the user's availability to connect to false
+        users[socket.id] = false;
+
+        // Emit to the peerId the stop event
+        io.to(peerId).emit('stopCall');
+
     });
 
-    // Wait for the socket call get_user_count and send the user count
-    socket.on("get_user_count", () => {
-        console.log("Got request for user count");
-        // Send the user count back to the requesting client only
-        socket.emit("user_count", Object.keys(users).length);
+    // Handle the skip event
+    socket.on('skip', (peerId) => {
+        console.log("User " + socket.id + " skipped the call");
+
+        // Set the user's availability to connect to true
+        users[socket.id] = true;
+
+        // Emit to the peerId the stop event
+        io.to(peerId).emit('stopCall');
+
+        // Get a random user to connect to
+        let newPeerId = getRandomUser(socket.id);
+        if (newPeerId) {
+            // Emit the connect_to event to the calling user
+            socket.emit('connect_to', { peerId: newPeerId });
+
+            // Emit the incoming_call event to the peerId
+            io.to(newPeerId).emit('incoming_call', { callerId: socket.id });
+        }
+    });
+
+    // Handle the offer event
+    socket.on('offer', (peerId, data) => {
+        console.log("Received offer from " + socket.id + " to " + peerId);
+
+        // Relay the offer to the peerId
+        io.to(peerId).emit('offer', data);
+    })
+
+    // Handle the answer event
+    socket.on('answer', (peerId, data) => {
+        console.log("Received answer from " + socket.id + " to " + peerId);
+
+        // Relay the answer to the peerId
+        io.to(peerId).emit('answer', data);
     })
 });
 
