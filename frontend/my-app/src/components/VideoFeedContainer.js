@@ -8,6 +8,12 @@ const VideoFeedContainer = () => {
     const socket = useContext(SocketContext);
     const [stream, setStream] = useState(null);
     const [peerStream, setPeerStream] = useState(null);
+    const [myId, setMyId] = useState(null);
+    const [userToCall, setUserToCall] = useState(null);
+    const [callAccepted, setCallAccepted] = useState(false);
+    const [receivedCall, setReceivedCall] = useState(false);
+    const [caller, setCaller] = useState(null);
+    const [callerSignal, setCallerSignal] = useState(null);
 
     useEffect(() => {
         if (socket) {
@@ -22,118 +28,88 @@ const VideoFeedContainer = () => {
                 console.error("Failed to get user media", error);
             });
 
-            // Listen for the connect_to event
-            socket.on('connect_to', ({ peerId }) => {
-                console.log("Connecting to peer", peerId);
+            socket.on("my_id", (id) => {
+                setMyId(id);
+                console.log("My id:", id);
+            });
 
-                // Create a new peer connection
-                const peer = new Peer({
-                    initiator: true,
-                    trickle: false,
-                    stream: stream,
-                });
-
-                // Listen for the signal event
-                peer.on('signal', (data) => {
-                    console.log("Sending offer to peer", peerId);
-                    socket.emit('offer', peerId, JSON.stringify(data));
-                });
-
-                // Listen for the stream event
-                peer.on('stream', (peerStream) => {
-                    console.log("Received stream from peer", peerId);
-                    setPeerStream(peerStream);
-                });
-
-                // Listen for the 'error' event
-                peer.on('error', (error) => {
-                    console.error("Peer error", error);
-                });
-
-                // Listen for the 'close' event
-                peer.on('close', () => {
-                    console.log("Peer connection closed");
-                    peer.destroy();
-                });
-
-                // Listen for the socket 'answer' event
-                socket.on('answer', (data) => {
-                    console.log("Received answer from peer", peerId);
-                    peer.signal(JSON.parse(data));
-                });
-
-                // Listen for the sockets 'stopCall' event
-                socket.on('stopCall', () => {
-                    console.log("Stopping call");
-                    setPeerStream(null);
-                    peer.destroy();
-                });
-            })
-
-            // Listen for the incoming call event
-            socket.on('incoming_call', ({ callerId }) => {
-                console.log("Incoming call from", callerId);
-
-                // Create a new peer connection
-                const peer = new Peer({
-                    initiator: false,
-                    trickle: false,
-                    stream: stream,
-                });
-
-                // Listen for the signal event
-                peer.on('signal', (data) => {
-                    console.log("Sending signal to caller", callerId);
-                    socket.emit('answer', callerId, JSON.stringify(data));
-                });
-
-                // Listen for the stream event
-                peer.on('stream', (peerStream) => {
-                    console.log("Received stream from caller", callerId);
-                    setPeerStream(peerStream);
-                });
-
-                // Listen for the 'error' event
-                peer.on('error', (error) => {
-                    console.error("Peer error", error);
-                });
-
-                // Listen for the 'close' event
-                peer.on('close', () => {
-                    console.log("Peer connection closed");
-                    peer.destroy();
-                });
-
-                // Listen for the socket 'offer' event
-                socket.on('offer', (data) => {
-                    console.log("Received offer from caller", callerId);
-                    peer.signal(JSON.parse(data));
-                });
-
-                // Listen for the sockets 'stopCall' event
-                socket.on('stopCall', () => {
-                    console.log("Stopping call");
-                    setPeerStream(null);
-                    peer.destroy();
-                });
-
-            })
+            socket.on("call", (data) => {
+                setReceivedCall(true);
+                setCaller(data.from);
+                setCallerSignal(data.signal);
+            });
         }
     }, [socket]);
 
+    function callUser() {
+        // Get a random user to connect to
+        socket.emit("get_random_user", myId);
+
+        // Handle the random_user event
+        socket.on("random_user", (randomUser) => {
+            console.log("Random user:", randomUser);
+            setUserToCall(randomUser);
+        });
+
+        // Create a new peer connection
+        const peer = new Peer({
+            initiator: true,
+            trickle: false,
+            stream: stream
+        });
+
+        peer.on("signal", (data) => {
+            socket.emit("callUser", { userToCall: userToCall, signalData: data, from: myId})
+        });
+
+        peer.on("stream", (stream) => {
+            setPeerStream(stream);
+        });
+
+        socket.on("callAccepted", (signal) => {
+            setCallAccepted(true);
+            peer.signal(signal);
+        });
+    }
+
+    function answerCall() {
+        setCallAccepted(true);
+        const peer = new Peer({
+            initiator: false,
+            trickle: false,
+            stream: stream
+        });
+
+        peer.on("signal", (data) => {
+            socket.emit("answerCall", { signal: data, to: caller });
+        });
+
+        peer.on("stream", (stream) => {
+            setPeerStream(stream);
+        })
+
+        peer.signal(callerSignal);
+    }
+
     const handleSkip = () => {
         console.log("Skipping call");
-        socket.emit('skip');
     }
 
     const handleStart = () => {
-        console.log("Starting call");
-        socket.emit('start');
+        console.log("Starting matchmaking");
+
+        if (receivedCall && !callAccepted) {
+            console.log("Answering call")
+            answerCall();
+        }
+        else {
+            console.log("Calling user")
+            callUser();
+        }
     }
 
     const handleStop = () => {
         console.log("Stopping call");
-        socket.emit('stop');
     }
 
 

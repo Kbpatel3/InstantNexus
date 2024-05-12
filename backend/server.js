@@ -43,72 +43,21 @@ io.on('connection', (socket) => {
         io.emit("user_count", count);
     });
 
-    // Handle the start event
-    socket.on('start', () => {
-        console.log("User " + socket.id + " started the call");
-
-        // Set the user's availability to connect to true
-        users[socket.id] = true;
-
-        // Get a random user to connect to
-        let peerId = getRandomUser(socket.id);
-        if (peerId) {
-            // Emit the connect_to event to the calling user
-            socket.emit('connect_to', { peerId: peerId });
-
-            // Emit the incoming_call event to the peerId
-            io.to(peerId).emit('incoming_call', { callerId: socket.id });
+    // Handle the get_random_user event
+    socket.on("get_random_user", (id) => {
+        let randomUser = getRandomUser(id);
+        if (randomUser) {
+            io.to(id).emit("random_user", randomUser);
         }
     });
 
-    // Handle the stop event
-    socket.on('stop', (peerId) => {
-        console.log("User " + socket.id + " stopped the call");
-
-        // Set the user's availability to connect to false
-        users[socket.id] = false;
-
-        // Emit to the peerId the stop event
-        io.to(peerId).emit('stopCall');
-
+    socket.on("callUser", (data) => {
+        io.to(data.userToCall).emit("call", { signal: data.signalData, from: data.from });
     });
 
-    // Handle the skip event
-    socket.on('skip', (peerId) => {
-        console.log("User " + socket.id + " skipped the call");
-
-        // Set the user's availability to connect to true
-        users[socket.id] = true;
-
-        // Emit to the peerId the stop event
-        io.to(peerId).emit('stopCall');
-
-        // Get a random user to connect to
-        let newPeerId = getRandomUser(socket.id);
-        if (newPeerId) {
-            // Emit the connect_to event to the calling user
-            socket.emit('connect_to', { peerId: newPeerId });
-
-            // Emit the incoming_call event to the peerId
-            io.to(newPeerId).emit('incoming_call', { callerId: socket.id });
-        }
+    socket.on("answerCall", (data) => {
+        io.to(data.to).emit("callAccepted", data.signal);
     });
-
-    // Handle the offer event
-    socket.on('offer', (peerId, data) => {
-        console.log("Received offer from " + socket.id + " to " + peerId);
-
-        // Relay the offer to the peerId
-        io.to(peerId).emit('offer', data);
-    })
-
-    // Handle the answer event
-    socket.on('answer', (peerId, data) => {
-        console.log("Received answer from " + socket.id + " to " + peerId);
-
-        // Relay the answer to the peerId
-        io.to(peerId).emit('answer', data);
-    })
 });
 
 function getRandomUser(excludeId) {
