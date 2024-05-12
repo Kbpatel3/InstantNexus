@@ -45,9 +45,18 @@ io.on('connection', (socket) => {
 
     // Handle the get_random_user event
     socket.on("get_random_user", (id) => {
+        console.log("Server received get_random_user event")
+        console.log("ID for the caller:", id)
         let randomUser = getRandomUser(id);
         if (randomUser) {
-            io.to(id).emit("random_user", randomUser);
+            // Decide who is the caller and who is the callee
+            let isInitiator = Math.random() < 0.5;
+
+            // Send back the random user and who will be the initiator
+            console.log("Sending to ", id, "random user:", randomUser, "isInitiator:", isInitiator)
+            console.log("Sending to random user:", randomUser, "id:", id, "isInitiator:", !isInitiator)
+            io.to(id).emit("random_user", { id: randomUser, isInitiator: isInitiator });
+            io.to(randomUser).emit("random_user", { id: id, isInitiator: !isInitiator });
         }
     });
 
@@ -64,6 +73,7 @@ function getRandomUser(excludeId) {
     let availableUsers = Object.keys(users).filter(key => users[key] === true && key !== excludeId);
     if (availableUsers.length > 0) {
         let randomIndex = Math.floor(Math.random() * availableUsers.length);
+        console.log("Random user:", availableUsers[randomIndex]);
         return availableUsers[randomIndex];
     }
     return null;

@@ -38,25 +38,55 @@ const VideoFeedContainer = () => {
                 setCaller(data.from);
                 setCallerSignal(data.signal);
             });
+
+            socket.on("random_user", (data) => {
+                console.log("Random user:", data);
+                setUserToCall(data.id);
+                if (data.isInitiator) {
+                    callUser(true);
+                } else {
+                    callUser(false);
+                }
+            })
         }
     }, [socket]);
 
-    function callUser() {
-        // Get a random user to connect to
-        socket.emit("get_random_user", myId);
-
-        // Handle the random_user event
-        socket.on("random_user", (randomUser) => {
-            console.log("Random user:", randomUser);
-            setUserToCall(randomUser);
-        });
+    function callUser(isInitiator) {
+        // // Get a random user to connect to
+        // socket.emit("get_random_user", myId);
+        //
+        // // Handle the random_user event
+        // socket.on("random_user", (randomUser) => {
+        //     console.log("Random user:", randomUser);
+        //     setUserToCall(randomUser);
+        // });
+        //
+        // // Create a new peer connection
+        // const peer = new Peer({
+        //     initiator: true,
+        //     trickle: false,
+        //     stream: stream
+        // });
+        //
+        // peer.on("signal", (data) => {
+        //     socket.emit("callUser", { userToCall: userToCall, signalData: data, from: myId})
+        // });
+        //
+        // peer.on("stream", (stream) => {
+        //     setPeerStream(stream);
+        // });
+        //
+        // socket.on("callAccepted", (signal) => {
+        //     setCallAccepted(true);
+        //     peer.signal(signal);
+        // });
 
         // Create a new peer connection
         const peer = new Peer({
-            initiator: true,
+            initiator: isInitiator,
             trickle: false,
             stream: stream
-        });
+        })
 
         peer.on("signal", (data) => {
             socket.emit("callUser", { userToCall: userToCall, signalData: data, from: myId})
@@ -72,10 +102,10 @@ const VideoFeedContainer = () => {
         });
     }
 
-    function answerCall() {
+    function answerCall(isInitiator) {
         setCallAccepted(true);
         const peer = new Peer({
-            initiator: false,
+            initiator: isInitiator,
             trickle: false,
             stream: stream
         });
@@ -98,14 +128,8 @@ const VideoFeedContainer = () => {
     const handleStart = () => {
         console.log("Starting matchmaking");
 
-        if (receivedCall && !callAccepted) {
-            console.log("Answering call")
-            answerCall();
-        }
-        else {
-            console.log("Calling user")
-            callUser();
-        }
+        // Get a random user to connect to
+        socket.emit("get_random_user", myId);
     }
 
     const handleStop = () => {
