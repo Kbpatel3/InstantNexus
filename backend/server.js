@@ -20,8 +20,8 @@ io.on('connection', (socket) => {
     // Get the user's id
     socket.emit("my_id", socket.id);
 
-    // Add the user to the list of users with no availability to connect
-    users[socket.id] = false;
+    // Add the user to the list of users with no availability to connect and not in a call
+    users[socket.id] = {availability: false, inCall: false};
 
     // Debugging: Print the list of users
     console.log(users);
@@ -45,32 +45,44 @@ io.on('connection', (socket) => {
 
     // Handle the get_random_user event
     socket.on("get_random_user", (id) => {
-        console.log("Server received get_random_user event")
-        console.log("ID for the caller:", id)
+        // Set the availability of the user to connect to true for the caller
+        users[id].availability = true;
+
+        // Get a random user to connect to
         let randomUser = getRandomUser(id);
+
+        // If there is a random user, send the random user and who will be the initiator
         if (randomUser) {
             // Decide who is the caller and who is the callee
             let isInitiator = Math.random() < 0.5;
 
             // Send back the random user and who will be the initiator
-            console.log("Sending to ", id, "random user:", randomUser, "isInitiator:", isInitiator)
-            console.log("Sending to random user:", randomUser, "id:", id, "isInitiator:", !isInitiator)
             io.to(id).emit("random_user", { id: randomUser, isInitiator: isInitiator });
             io.to(randomUser).emit("random_user", { id: id, isInitiator: !isInitiator });
+
+            // Set the inCall status to true for both users
+            users[id].inCall = true;
+            users[randomUser].inCall = true;
         }
     });
 
-    socket.on("callUser", (data) => {
-        io.to(data.userToCall).emit("call", { signal: data.signalData, from: data.from });
+    socket.on("is_available", (id) => {
+        users[id].availability = true;
     });
 
-    socket.on("answerCall", (data) => {
-        io.to(data.to).emit("callAccepted", data.signal);
+    socket.on("is_not_available", (id) => {
+        users[id].availability = false;
+    });
+
+    // Handle the send_signal event
+    socket.on("send_signal", (data) => {
+        io.to(data.to).emit("receive_signal", data.signal);
     });
 });
 
 function getRandomUser(excludeId) {
-    let availableUsers = Object.keys(users).filter(key => users[key] === true && key !== excludeId);
+    // Get all the available users except the user to exclude and users who are already in a call or not available
+    let availableUsers = Object.keys(users).filter(id => id !== excludeId && users[id].availability && !users[id].inCall);
     if (availableUsers.length > 0) {
         let randomIndex = Math.floor(Math.random() * availableUsers.length);
         console.log("Random user:", availableUsers[randomIndex]);
