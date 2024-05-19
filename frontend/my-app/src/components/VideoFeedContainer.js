@@ -1,163 +1,180 @@
-import { useState, useRef, useEffect } from 'react';
-import Peer from "simple-peer";
+import { useState, useRef, useEffect, useContext } from 'react';
 import VideoFeed from './VideoFeed';
 import SocketContext from '../context/SocketContext';
-import { useContext } from 'react';
 
 const VideoFeedContainer = () => {
     const socket = useContext(SocketContext);
     const [stream, setStream] = useState(null);
-    const [peerStream, setPeerStream] = useState(null);
+    const [remoteStream, setRemoteStream] = useState(null);
     const [myId, setMyId] = useState(null);
     const [userToCall, setUserToCall] = useState(null);
     const [status, setStatus] = useState(null);
-    const [isInitiator, setIsInitiator] = useState(null);
     const [isAvailable, setIsAvailable] = useState(false);
     const [inCall, setInCall] = useState(false);
     const peerRef = useRef(null);
 
     useEffect(() => {
-        if (socket) {
-            navigator.mediaDevices.getUserMedia({video: true, audio: true}).then((stream) => {
-                setStream(stream);
-            }).catch(error => {
-                console.error("Failed to get user media", error);
-            });
+        const getMedia = async () => {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const hasVideoInput = devices.some(device => device.kind === 'videoinput');
+                const hasAudioInput = devices.some(device => device.kind === 'audioinput');
 
+                if (hasVideoInput && hasAudioInput) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    setStream(stream);
+                } else {
+                    throw new Error("No video or audio input devices found");
+                }
+            } catch (error) {
+                console.error("Failed to get user media", error);
+
+                // Check for specific error types
+                if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    setStatus("No camera or microphone found. Please check your devices.");
+                } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    setStatus("Permission denied. Please allow access to camera and microphone.");
+                } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+                    setStatus("Constraints cannot be satisfied by available devices. Please check your settings.");
+                } else {
+                    setStatus("Failed to access camera or microphone. Please check permissions and devices.");
+                }
+            }
+        };
+
+        getMedia();
+
+        return () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (socket) {
             socket.on("my_id", (id) => {
                 setMyId(id);
                 console.log("My id:", id);
             });
 
-            socket.on("receive_signal", (signal) => {
+            socket.on("signal", ({ signal, from }) => {
                 if (peerRef.current) {
-                    console.log("Receiving signal");
                     peerRef.current.signal(signal);
                 } else {
-                    console.error("Peer is null");
+                    const peer = new window.SimplePeer({
+                        initiator: false,
+                        trickle: false,
+                        stream: stream
+                    });
+
+                    peer.on("signal", (signal) => {
+                        socket.emit("signal", { userToSignal: from, signal: signal });
+                    });
+
+                    peer.on("stream", (userStream) => {
+                        setRemoteStream(userStream);
+                    });
+
+                    peer.signal(signal);
+                    peerRef.current = peer;
                 }
             });
+
+            return () => {
+                socket.off("my_id");
+                socket.off("signal");
+            };
         }
-    }, [socket]);
+    }, [socket, stream]);
 
     useEffect(() => {
-        // If the user is available to connect, and not in a call, every 1 second, get a random
-        // user to connect to until a user is found to connect to
         if (isAvailable && !inCall) {
             const interval = setInterval(() => {
                 socket.emit("get_random_user", myId);
 
                 socket.on("random_user", (data) => {
-                    setUserToCall(data.id);
-                    setIsInitiator(data.isInitiator);
-                    console.log("My id is: " + myId + " and I am the initiator: " + data.isInitiator + " and I will call: " + data.id);
+                    if (data.id) {
+                        setUserToCall(data.id);
+                        setInCall(true);
+                        console.log(`My id is: ${myId} and I am the initiator: ${data.isInitiator} and I will call: ${data.id}`);
+                    }
                 });
             }, 1000);
 
             return () => clearInterval(interval);
         }
-    }, [isAvailable]);
+    }, [isAvailable, inCall, myId, socket]);
 
     useEffect(() => {
-        if (userToCall && stream) {
-            console.log("I am : " + myId + " and I am calling: " + userToCall)
-            const peer = new Peer({
-                initiator: isInitiator,
+        if (userToCall) {
+            const peer = new window.SimplePeer({
+                initiator: true,
                 trickle: false,
-                stream: stream
-            })
-
-            console.log("Peer object made")
+                stream: stream,
+            });
 
             peer.on("signal", (signal) => {
-                socket.emit("send_signal", { signal, to: userToCall });
-                console.log("My id is: " + myId + " and I am sending a signal to: " + userToCall);
+                socket.emit("signal", { userToSignal: userToCall, signal: signal });
             });
 
-            peer.on("stream", (stream) => {
-                console.log("my id is: " + myId + " and I am receiving a stream from: " + userToCall);
-                setPeerStream(stream);
-                setInCall(true);
-                setStatus(null);
-            })
-
-            peer.on("close", () => {
-                console.log("Peer closed");
-                setPeerStream(null);
-                setInCall(false);
-                setStatus("The call has ended.");
-
-            });
-
-            peer.on("error", (error) => {
-                console.error("Peer error:", error);
+            peer.on("stream", (userStream) => {
+                setRemoteStream(userStream);
             });
 
             peerRef.current = peer;
         }
-    }, [userToCall, stream, isInitiator]);
+    }, [userToCall, stream, socket]);
 
     const handleSkip = () => {
-        console.log("Skipping call");
-        peerRef.current.destroy();
-        setPeerStream(null);
+        if (peerRef.current) {
+            peerRef.current.destroy();
+            peerRef.current = null;
+        }
+        setRemoteStream(null);
         setInCall(false);
         setStatus("You have skipped the call. Looking for a user to connect to.");
         socket.emit("is_available", myId);
-    }
+    };
 
     const handleStart = () => {
-        console.log("Starting matchmaking");
-
-        // Set status to "Looking for a user to connect to"
         setStatus("You are in matchmaking mode. Looking for a user to connect to.");
-
-        // // Let the server know that the user is available to connect
-        // socket.emit("is_available", myId);
-
-        // Set the availability of the user to connect to true for the caller
         setIsAvailable(true);
-    }
+    };
 
     const handleStop = () => {
-        console.log("Stopping call");
-
         if (peerRef.current) {
             peerRef.current.destroy();
+            peerRef.current = null;
         }
-
-        setPeerStream(null);
+        setRemoteStream(null);
         setInCall(false);
         setStatus("You have stopped the call. You are no longer available to connect to other users.");
         setIsAvailable(false);
+        socket.emit("call_ended", myId);
         socket.emit("is_not_available", myId);
-    }
-
-
+    };
 
     return (
         <>
             <div className="flex justify-between items-center p-2">
                 {myId}
-                <div
-                    className="aspect-w-16 aspect-h-9 w-full max-w-[65%]">
-                    {stream && <VideoFeed key={stream.id} videoFeed={stream} myFeed={true} isStream={true}/>}
+                <div className="aspect-w-16 aspect-h-9 w-full max-w-[65%]">
+                    <VideoFeed videoFeed={stream} myFeed={true} isStream={true} />
                 </div>
                 <div className="w-6"></div>
-                <div
-                    className="aspect-w-16 aspect-h-9 w-full max-w-[65%]">
-                    {peerStream && <VideoFeed key={peerStream.id} videoFeed={peerStream} myFeed={false} isStream={true}/>}
-                    {!peerStream && status && <p>{status}</p>}
+                <div className="aspect-w-16 aspect-h-9 w-full max-w-[65%]">
+                    <VideoFeed videoFeed={remoteStream} myFeed={false} isStream={true} />
+                    {!remoteStream && status && <p>{status}</p>}
                 </div>
             </div>
             <div className="flex justify-center p-2">
-                <button className={"btn btn-primary btn-sm p-2"} onClick={handleStart}>Start</button>
+                <button className="btn btn-primary btn-sm p-2" onClick={handleStart}>Start</button>
                 <button className="btn btn-secondary btn-sm p-2" onClick={handleSkip}>Skip</button>
                 <button className="btn btn-secondary btn-sm p-2" onClick={handleStop}>Stop</button>
             </div>
         </>
     );
 };
-
 
 export default VideoFeedContainer;

@@ -7,28 +7,27 @@ const io = require("socket.io")(server, {
         origin: "http://localhost:3000",
         methods: ["GET", "POST"]
     }
-})
+});
 
 // Keep track of all users in a dictionary with key being the id and value being whether they are available to connect
 let users = {};
 
-
 // Create a socket connection
 io.on('connection', (socket) => {
-    console.log('User connected');
+    console.log('User connected:', socket.id);
 
     // Get the user's id
     socket.emit("my_id", socket.id);
 
     // Add the user to the list of users with no availability to connect and not in a call
-    users[socket.id] = {availability: false, inCall: false};
+    users[socket.id] = { availability: false, inCall: false };
 
     // Debugging: Print the list of users
     console.log(users);
 
     // Handle the disconnect event
     socket.on('disconnect', () => {
-        console.log('User disconnected');
+        console.log('User disconnected:', socket.id);
 
         // Remove the user from the list of users
         delete users[socket.id];
@@ -45,38 +44,59 @@ io.on('connection', (socket) => {
 
     // Handle the get_random_user event
     socket.on("get_random_user", (id) => {
-        // Set the availability of the user to connect to true for the caller
-        users[id].availability = true;
+        if (users[id]) {
+            // Set the availability of the user to connect to true for the caller
+            users[id].availability = true;
 
-        // Get a random user to connect to
-        let randomUser = getRandomUser(id);
+            // Get a random user to connect to
+            let randomUser = getRandomUser(id);
 
-        // If there is a random user, send the random user and who will be the initiator
-        if (randomUser) {
-            // Decide who is the caller and who is the callee
-            let isInitiator = Math.random() < 0.5;
+            // If there is a random user, send the random user and who will be the initiator
+            if (randomUser) {
+                // Decide who is the caller and who is the callee
+                let isInitiator = Math.random() < 0.5;
 
-            // Send back the random user and who will be the initiator
-            io.to(id).emit("random_user", { id: randomUser, isInitiator: isInitiator });
-            io.to(randomUser).emit("random_user", { id: id, isInitiator: !isInitiator });
+                // Send back the random user and who will be the initiator
+                io.to(id).emit("random_user", { id: randomUser, isInitiator: isInitiator });
+                io.to(randomUser).emit("random_user", { id: id, isInitiator: !isInitiator });
 
-            // Set the inCall status to true for both users
-            users[id].inCall = true;
-            users[randomUser].inCall = true;
+                // Set the inCall status to true for both users
+                users[id].inCall = true;
+                users[randomUser].inCall = true;
+
+                // Set the availability of the users to false
+                users[id].availability = false;
+                users[randomUser].availability = false;
+            }
         }
     });
 
     socket.on("is_available", (id) => {
-        users[id].availability = true;
+        if (users[id]) {
+            users[id].availability = true;
+        }
     });
 
     socket.on("is_not_available", (id) => {
-        users[id].availability = false;
+        if (users[id]) {
+            users[id].availability = false;
+        }
     });
 
-    // Handle the send_signal event
-    socket.on("send_signal", (data) => {
-        io.to(data.to).emit("receive_signal", data.signal);
+    // Handle the signal event
+    socket.on("signal", ({ userToSignal, signal }) => {
+        // Forward the signal to the user to signal
+        if (users[userToSignal]) {
+            io.to(userToSignal).emit("signal", { signal, from: socket.id });
+        }
+    });
+
+    // Handle the call_ended event
+    socket.on("call_ended", (id) => {
+        if (users[id]) {
+            users[id].inCall = false;
+            users[id].availability = true;
+        }
     });
 });
 
@@ -92,4 +112,3 @@ function getRandomUser(excludeId) {
 }
 
 server.listen(5000, () => console.log('server is running on port 5000'));
-
