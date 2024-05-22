@@ -32,18 +32,23 @@ const VideoFeedContainer = () => {
 
                 // Check for specific error types
                 if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-                    setStatus("No camera or microphone found. Please check your devices.");
+                    console.error("No camera or microphone found. Please check your devices.");
                 } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-                    setStatus("Permission denied. Please allow access to camera and microphone.");
+                    console.error("Permission denied. Please allow access to camera and" +
+                    " microphone.");
                 } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
-                    setStatus("Constraints cannot be satisfied by available devices. Please check your settings.");
+                    console.error("Constraints cannot be satisfied by available devices. Please" +
+                        " check your settings.");
                 } else {
-                    setStatus("Failed to access camera or microphone. Please check permissions and devices.");
+                    console.error("Failed to access camera or microphone. Please check" +
+                        " permissions and" +
+                        " devices.");
                 }
             }
         };
 
         getMedia();
+        setStatus("You are not in matchmaking mode. Click the Start button to start matchmaking.");
 
         return () => {
             if (stream) {
@@ -144,6 +149,8 @@ const VideoFeedContainer = () => {
     const handleStart = () => {
         setStatus("You are in matchmaking mode. Looking for a user to connect to.");
         setIsAvailable(true);
+        setInCall(false);
+        socket.emit("is_available", myId);
     };
 
     const handleStop = () => {
@@ -157,12 +164,12 @@ const VideoFeedContainer = () => {
         setIsAvailable(false);
         socket.emit("call_ended", myId);
         socket.emit("is_not_available", myId);
+        setIsInitiator(false);
     };
 
     return (
         <>
             <div className="flex justify-between items-center p-2">
-                {myId}
                 <div className="aspect-w-16 aspect-h-9 w-full max-w-[65%]">
                     <VideoFeed videoFeed={stream} myFeed={true} isStream={true} />
                 </div>

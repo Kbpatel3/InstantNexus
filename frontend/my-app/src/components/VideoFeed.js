@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import tempVideo from './temp.mp4';
 
 const VideoFeed = ({ videoFeed, myFeed, isStream = false }) => {
     // Get the width of the window
@@ -40,11 +39,11 @@ const VideoFeed = ({ videoFeed, myFeed, isStream = false }) => {
                     ref={videoRef}
                     src={!isStream ? videoFeed : undefined}
                     onCanPlay={() => videoRef.current.play()}
-                    style={myFeed ? {transform: 'scaleX(-1)'} : {}}
+                    style={myFeed ? {transform: 'scaleX(-1)'} : {transform: 'scaleX(-1)'}}
                 ></video>
             ) : (
                 <div className={"w-full h-auto flex items-center justify-center"} style={{fontSize: '1rem'}}>
-                    {myFeed ? "Please allow access to your camera and microphone" : "Waiting for user to start video feed"}
+                    {myFeed}
                 </div>
             )}
         </div>
