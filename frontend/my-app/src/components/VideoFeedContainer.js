@@ -12,6 +12,7 @@ const VideoFeedContainer = () => {
     const [isAvailable, setIsAvailable] = useState(false);
     const [inCall, setInCall] = useState(false);
     const peerRef = useRef(null);
+    const [isInitiator, setIsInitiator] = useState(false);
 
     useEffect(() => {
         const getMedia = async () => {
@@ -58,14 +59,12 @@ const VideoFeedContainer = () => {
                 console.log("My id:", id);
             });
 
-            socket.on("signal", ({ signal, from }) => {
-                if (peerRef.current) {
-                    peerRef.current.signal(signal);
-                } else {
+            socket.on("signal", async ({ signal, from }) => {
+                if (!peerRef.current) {
                     const peer = new window.SimplePeer({
-                        initiator: false,
+                        initiator: isInitiator,
                         trickle: false,
-                        stream: stream
+                        stream: stream,
                     });
 
                     peer.on("signal", (signal) => {
@@ -76,8 +75,13 @@ const VideoFeedContainer = () => {
                         setRemoteStream(userStream);
                     });
 
-                    peer.signal(signal);
                     peerRef.current = peer;
+                }
+
+                try {
+                    await peerRef.current.signal(signal);
+                } catch (error) {
+                    console.error("Error during signaling:", error);
                 }
             });
 
@@ -92,32 +96,12 @@ const VideoFeedContainer = () => {
         if (isAvailable && !inCall) {
             const interval = setInterval(() => {
                 socket.emit("get_random_user", myId);
-
                 socket.on("random_user", (data) => {
                     if (data.id) {
                         setUserToCall(data.id);
                         setInCall(true);
+                        setIsInitiator(data.isInitiator);
                         console.log(`My id is: ${myId} and I am the initiator: ${data.isInitiator} and I will call: ${data.id}`);
-
-                        const initiator = data.isInitiator;
-
-                        if (initiator) {
-                            const peer = new window.SimplePeer({
-                                initiator: true,
-                                trickle: false,
-                                stream: stream,
-                            });
-
-                            peer.on("signal", (signal) => {
-                                socket.emit("signal", { userToSignal: data.id, signal: signal });
-                            });
-
-                            peer.on("stream", (userStream) => {
-                                setRemoteStream(userStream);
-                            });
-
-                            peerRef.current = peer;
-                        }
                     }
                 });
             }, 1000);
@@ -127,9 +111,9 @@ const VideoFeedContainer = () => {
     }, [isAvailable, inCall, myId, socket]);
 
     useEffect(() => {
-        if (userToCall && !inCall) {
+        if (userToCall) {
             const peer = new window.SimplePeer({
-                initiator: false,
+                initiator: isInitiator,
                 trickle: false,
                 stream: stream,
             });

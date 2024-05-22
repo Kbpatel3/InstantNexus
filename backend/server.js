@@ -16,11 +16,11 @@ let users = {};
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // Get the user's id
-    socket.emit("my_id", socket.id);
-
     // Add the user to the list of users with no availability to connect and not in a call
     users[socket.id] = { availability: false, inCall: false };
+
+    // Get the user's id
+    socket.emit("my_id", socket.id);
 
     // Debugging: Print the list of users
     console.log(users);
