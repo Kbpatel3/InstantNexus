@@ -90,6 +90,13 @@ const VideoFeedContainer = () => {
                 }
             });
 
+            socket.on("call_ended_notification", (message) => {
+                setStatus(message);
+                setIsAvailable(true);
+                setInCall(false);
+                socket.emit("is_available", myId);
+            });
+
             return () => {
                 socket.off("my_id");
                 socket.off("signal");
@@ -162,7 +169,7 @@ const VideoFeedContainer = () => {
         setInCall(false);
         setStatus("You have stopped the call. You are no longer available to connect to other users.");
         setIsAvailable(false);
-        socket.emit("call_ended", myId);
+        socket.emit("call_ended", { id: myId, userToNotify: userToCall });
         socket.emit("is_not_available", myId);
         setIsInitiator(false);
     };
@@ -175,8 +182,11 @@ const VideoFeedContainer = () => {
                 </div>
                 <div className="w-6"></div>
                 <div className="aspect-w-16 aspect-h-9 w-full max-w-[65%]">
-                    <VideoFeed videoFeed={remoteStream} myFeed={false} isStream={true} />
-                    {!remoteStream && status && <p>{status}</p>}
+                    {remoteStream ? (
+                        <VideoFeed videoFeed={remoteStream} myFeed={false} isStream={true} />
+                    ) : (
+                        <p>{status}</p>
+                    )}
                 </div>
             </div>
             <div className="flex justify-center p-2">

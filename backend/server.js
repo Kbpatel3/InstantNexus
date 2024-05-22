@@ -92,10 +92,16 @@ io.on('connection', (socket) => {
     });
 
     // Handle the call_ended event
-    socket.on("call_ended", (id) => {
+    socket.on("call_ended", ({ id, userToNotify }) => {
         if (users[id]) {
             users[id].inCall = false;
-            users[id].availability = true;
+            users[id].availability = false;
+        }
+
+        if (users[userToNotify]) {
+            users[userToNotify].inCall = false;
+            users[userToNotify].availability = true;
+            io.to(userToNotify).emit("call_ended_notification", "User stopped the call. Searching for the next match.");
         }
     });
 });
