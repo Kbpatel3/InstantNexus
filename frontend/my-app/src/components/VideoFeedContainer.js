@@ -59,12 +59,12 @@ const VideoFeedContainer = () => {
 
     useEffect(() => {
         if (socket) {
-            socket.on("my_id", (id) => {
+            const handleMyId = (id) => {
                 setMyId(id);
                 console.log("My id:", id);
-            });
+            };
 
-            socket.on("signal", async ({ signal, from }) => {
+            const handleSignal = async ({ signal, from }) => {
                 if (!peerRef.current) {
                     const peer = new window.SimplePeer({
                         initiator: isInitiator,
@@ -88,27 +88,44 @@ const VideoFeedContainer = () => {
                 } catch (error) {
                     console.error("Error during signaling:", error);
                 }
-            });
+            };
 
-            socket.on("call_ended_notification", (message) => {
+            const handleCallEndedNotification = (message) => {
                 setStatus(message);
+                console.log("State before client call ended:", isAvailable, inCall);
                 setIsAvailable(true);
                 setInCall(false);
+                setUserToCall(null);
+                setRemoteStream(null);
+                setIsInitiator(false);
+                if (peerRef.current) {
+                    peerRef.current.destroy();
+                    peerRef.current = null;
+                }
                 socket.emit("is_available", myId);
-            });
+            };
+
+            socket.on("my_id", handleMyId);
+            socket.on("signal", handleSignal);
+            socket.on("call_ended_notification", handleCallEndedNotification);
 
             return () => {
-                socket.off("my_id");
-                socket.off("signal");
+                socket.off("my_id", handleMyId);
+                socket.off("signal", handleSignal);
+                socket.off("call_ended_notification", handleCallEndedNotification);
             };
         }
-    }, [socket, stream]);
+    }, [socket, stream, isInitiator]);
 
     useEffect(() => {
         if (isAvailable && !inCall) {
+            console.log("About to get random user");
             const interval = setInterval(() => {
+                console.log("Asking server for random user")
                 socket.emit("get_random_user", myId);
+                console.log("Asked server for random user")
                 socket.on("random_user", (data) => {
+                    console.log("Received random user from server")
                     if (data.id) {
                         setUserToCall(data.id);
                         setInCall(true);
@@ -140,7 +157,7 @@ const VideoFeedContainer = () => {
 
             peerRef.current = peer;
         }
-    }, [userToCall, stream, socket]);
+    }, [userToCall, stream, socket, isInitiator]);
 
     const handleSkip = () => {
         if (peerRef.current) {
@@ -156,7 +173,6 @@ const VideoFeedContainer = () => {
     const handleStart = () => {
         setStatus("You are in matchmaking mode. Looking for a user to connect to.");
         setIsAvailable(true);
-        setInCall(false);
         socket.emit("is_available", myId);
     };
 
@@ -169,9 +185,10 @@ const VideoFeedContainer = () => {
         setInCall(false);
         setStatus("You have stopped the call. You are no longer available to connect to other users.");
         setIsAvailable(false);
-        socket.emit("call_ended", { id: myId, userToNotify: userToCall });
-        socket.emit("is_not_available", myId);
         setIsInitiator(false);
+        setUserToCall(null);
+        socket.emit("is_not_available", myId);
+        socket.emit("call_ended", { id: myId, userToNotify: userToCall });
     };
 
     return (
