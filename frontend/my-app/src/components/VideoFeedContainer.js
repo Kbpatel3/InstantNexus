@@ -159,6 +159,12 @@ const VideoFeedContainer = () => {
         }
     }, [userToCall, stream, socket, isInitiator]);
 
+    const handleStart = () => {
+        setStatus("You are in matchmaking mode. Looking for a user to connect to.");
+        setIsAvailable(true);
+        socket.emit("is_available", myId);
+    };
+
     const handleSkip = () => {
         if (peerRef.current) {
             peerRef.current.destroy();
@@ -167,13 +173,11 @@ const VideoFeedContainer = () => {
         setRemoteStream(null);
         setInCall(false);
         setStatus("You have skipped the call. Looking for a user to connect to.");
-        socket.emit("is_available", myId);
-    };
-
-    const handleStart = () => {
-        setStatus("You are in matchmaking mode. Looking for a user to connect to.");
         setIsAvailable(true);
+        setIsInitiator(false);
+        setUserToCall(null);
         socket.emit("is_available", myId);
+        socket.emit("call_ended", { id: myId, userToNotify: userToCall });
     };
 
     const handleStop = () => {
