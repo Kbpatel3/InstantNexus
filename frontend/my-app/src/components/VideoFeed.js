@@ -9,7 +9,7 @@ const VideoFeed = ({ videoFeed, myFeed, isStream = false }) => {
 
     // Check if the video feed is a stream
     useEffect(() => {
-        if (isStream && videoRef.current && videoFeed) {
+        if (videoRef.current && isStream && videoFeed) {
             videoRef.current.srcObject = videoFeed;
         }
 
