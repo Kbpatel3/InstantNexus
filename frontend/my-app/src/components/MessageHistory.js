@@ -1,7 +1,11 @@
 import Message from "./Message.js";
+import SocketContext from '../context/SocketContext';
+import {useContext} from "react";
 let { useState } = require("react");
 
 const MessageHistory = () => {
+    const socket = useContext(SocketContext);
+
     const [messages, setMessages] = useState([
         { message: "Hello, World!", position: "end" },
         { message: "Hi, there!", position: "start" },

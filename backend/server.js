@@ -107,6 +107,17 @@ io.on('connection', (socket) => {
                 " Searching for the next match.");
         }
     });
+
+    socket.on("call_connected", ({ id, otherId }) => {
+        // Setup a chat room for the two users
+        let roomId = id + "-" + otherId;
+        messages[roomId] = [];
+        console.log("Chat room created:", roomId);
+
+        // Notify the users that the call has connected and to join the chat room (roomId)
+        io.to(id).emit("call_connected", roomId);
+        io.to(otherId).emit("call_connected", roomId);
+    });
 });
 
 function getRandomUser(excludeId) {
