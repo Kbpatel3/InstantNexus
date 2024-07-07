@@ -1,13 +1,28 @@
 const express = require('express');
-const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const app = express();
-const server = http.createServer(app);
+
+// SSL certificate and key
+const privateKey = fs.readFileSync('../server.key', 'utf8');
+const certificate = fs.readFileSync('../server.cert', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
+
+// Create an HTTPS server
+const server = https.createServer(credentials, app);
+
 const io = require("socket.io")(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
+
+// Add a default route
+app.get('/', (req, res) => {
+    res.send('Server is running.');
+});
+
 
 // Keep track of all users in a dictionary with key being the id and value being whether they are available to connect
 let users = {};
@@ -131,4 +146,4 @@ function getRandomUser(excludeId) {
     return null;
 }
 
-server.listen(5000, () => console.log('server is running on port 5000'));
+server.listen(5000, '0.0.0.0', () => console.log('server is running on port 5000'));

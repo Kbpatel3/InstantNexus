@@ -9,7 +9,7 @@ import SocketContext from "./context/SocketContext";
 import { io } from "socket.io-client";
 
 // Make a connection to the server
-const socket = io.connect("http://localhost:5000");
+const socket = io.connect("https://192.168.1.27:5000");
 
 /**
  * App component that contains the routes for the application
