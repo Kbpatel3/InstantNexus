@@ -155,6 +155,11 @@ const VideoFeedContainer = () => {
                 setRemoteStream(userStream);
             });
 
+            peer.on("error", (error) => {
+                console.error("Peer error:", error);
+                handleStop();
+            })
+
             peerRef.current = peer;
         }
     }, [userToCall, stream, socket, isInitiator]);
