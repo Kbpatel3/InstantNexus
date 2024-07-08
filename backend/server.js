@@ -44,6 +44,8 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
 
+        handleDisconnect(socket.id);
+
         // Remove the user from the list of users
         delete users[socket.id];
 
@@ -134,6 +136,24 @@ io.on('connection', (socket) => {
         io.to(otherId).emit("call_connected", roomId);
     });
 });
+
+function handleDisconnect(userId) {
+    if (users[userId] && users[userId].inCall) {
+        let userToNotify = getConnectedUser(userId);
+
+        if (userToNotify) {
+            console.log("Notifying disconnected user's partner:", userToNotify);
+            users[userToNotify].inCall = false;
+            users[userToNotify].availability = true;
+            io.to(userToNotify).emit("call_ended_notification", "Partner disconnected." +
+                " Searching for the next match.");
+        }
+    }
+}
+
+function getConnectedUser(exludeId) {
+    return Object.keys(users).find(id => users[id].inCall && id !== exludeId);
+}
 
 function getRandomUser(excludeId) {
     // Get all the available users except the user to exclude and users who are already in a call or not available

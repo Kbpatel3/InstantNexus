@@ -166,8 +166,8 @@ const VideoFeedContainer = () => {
 
     const handleStart = () => {
         setStatus("You are in matchmaking mode. Looking for a user to connect to.");
-        setIsAvailable(true);
         socket.emit("is_available", myId);
+        setIsAvailable(true);
     };
 
     const handleSkip = () => {
