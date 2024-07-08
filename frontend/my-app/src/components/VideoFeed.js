@@ -29,20 +29,20 @@ const VideoFeed = ({ videoFeed, myFeed, isStream = false }) => {
     }, []);
 
     return (
-        <div className="aspect-w-16 aspect-h-9 mx-auto max-w-3xl">
+        <div className="relative mx-auto max-w-3xl bg-black" style={{ paddingTop: '56.25%' }}>
             {videoFeed ? (
                 <video
-                    className="w-full h-auto"
+                    className="absolute top-0 left-0 w-full h-full object-cover"
                     playsInline={true}
                     autoPlay={true}
                     muted={myFeed}
                     ref={videoRef}
                     src={!isStream ? videoFeed : undefined}
                     onCanPlay={() => videoRef.current.play()}
-                    style={myFeed ? {transform: 'scaleX(-1)'} : {transform: 'scaleX(-1)'}}
+                    style={myFeed ? { transform: 'scaleX(-1)' } : {}}
                 ></video>
             ) : (
-                <div className={"w-full h-auto flex items-center justify-center"} style={{fontSize: '1rem'}}>
+                <div className={"absolute top-0 left-0 w-full h-full flex items-center justify-center text-lg text-white"} style={{fontSize: '1rem'}}>
                     {myFeed}
                 </div>
             )}
